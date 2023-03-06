@@ -22,3 +22,4 @@ ROS_MASTER_URI="http://$master:11311"
 export ROS_IP
 export ROS_MASTER_URI
 export ROS_HOSTNAME
+
