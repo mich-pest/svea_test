@@ -20,4 +20,7 @@
     <node pkg="svea_mocap" type="localization_comparison.py" name="localization_comparison" output="screen">
         <param name="mocap_name" value="$(arg mocap_name)"/>
     </node>
+
+    <node pkg="svea_mocap" type="tf_mocap_to_map.py" name="tf_mocap_to_map" output="screen">
+    </node>
 </launch>
