@@ -26,8 +26,6 @@
         <include file="$(find svea_sensors)/launch/localize.launch"/>
 
     </group>
-    
-    <node pkg="svea_sensors" type="actuation_to_twist.py" output="screen" name="actuation_to_twist" />
 
     <!-- Start RViz -->
     <node if="$(eval use_rviz and not remote_rviz)"
@@ -52,7 +50,7 @@
             - [-2, 5]
         </rosparam> -->
         <!-- Waypoints for sml map -->
-        <rosparam>
+        <!-- <rosparam>
             state: [1.4, -1.7, 0.9] # initial state (x, y, yaw)
             points:
             - [1.9, 1.43]
@@ -61,7 +59,15 @@
             - [1.4, -1.7]
             obstacles_points:
             - [-0.85, 0.9]
-        </rosparam>
+        </rosparam> -->
+        <rosparam>
+            state: [-1.9, -2, 1.7] # initial state (x, y, yaw)
+            points:
+            - [-1.9, 1.4]
+            - [0, 1.4]
+            obstacles_points:
+            - [0, 1.5]
+        </rosparam> 
     </node>
 
 </launch>
