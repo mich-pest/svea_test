@@ -83,7 +83,7 @@ class PurePursuitController(object):
         if dist < 0.1:
             #!! Bug: ithe robot will stop at the first waypoint thinking that it has completed its path. Fixed by adding
             #!! in the keep_alive function of pure_pursuit node, the first if statement
-            self.is_finished = True
+            #self.is_finished = True
             #print(f'STOP {self.is_finished}')
             pass
 

@@ -144,14 +144,15 @@ class pure_pursuit:
     def keep_alive(self):
         #!! self.svea.is_finished becomes true if in pure_pursuit controller, function _calc_target_index, fixed with
         #!! these lines
-        if self.svea.is_finished:
-            self.update_goal()
-            xs, ys = self.compute_traj()
-            self.svea.update_traj(xs, ys)
+        #if self.svea.is_finished:
+        #    self.update_goal()
+        #    xs, ys = self.compute_traj()
+        #    self.svea.update_traj(xs, ys)
         return not (self.svea.is_finished or rospy.is_shutdown())
 
     def spin(self):
-        safe = True
+        #!! Safe to send controls is localization node is up and running
+        safe = self.svea.localizer.is_ready
         # limit the rate of main loop by waiting for state
         state = self.svea.wait_for_state()
 
