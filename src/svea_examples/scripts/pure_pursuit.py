@@ -64,7 +64,7 @@ class pure_pursuit:
     GOAL_THRESH = 0.2
     # Obstacle threshold for obstacle management
     OBS_THRESH = 0.7
-    TARGET_VELOCITY = 0.2
+    TARGET_VELOCITY = 0.35
     RATE = 1e9
 
     def __init__(self):
