@@ -148,7 +148,7 @@ class pure_pursuit:
         #    self.update_goal()
         #    xs, ys = self.compute_traj()
         #    self.svea.update_traj(xs, ys)
-        return not (self.svea.is_finished or rospy.is_shutdown())
+        return not (rospy.is_shutdown())
 
     def spin(self):
         #!! Safe to send controls is localization node is up and running

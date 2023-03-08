@@ -64,7 +64,9 @@
             state: [-1.9, -2, 1.7] # initial state (x, y, yaw)
             points:
             - [-1.9, 1.4]
-            - [0, 1.4]
+            - [0.0, 1.4]
+            - [0.0, -2.0]
+            - [-1.9, -2.0]
             obstacles_points:
             - [0, 1.5]
         </rosparam> 
