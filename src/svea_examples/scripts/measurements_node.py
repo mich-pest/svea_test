@@ -6,7 +6,7 @@ import tf
 import math
 from svea.states import VehicleState
 from svea_msgs.msg import VehicleState as VehicleStateMsg
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
+from geometry_msgs.msg import PoseStamped
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -37,11 +37,12 @@ class MeasurementsNode:
         self.OFFSET_ANGLE = -math.pi/2
         self.ROTATION_MATRIX = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
-        print(self.ROTATION_MATRIX)
+        self.COVARIANCE_THRESHOLD = 7
 
         self.fig, self.ax = plt.subplots()
-        self.line1, = self.ax.plot([], [], color = "r")
-        self.line2, = self.ax.plot([], [], color = "g")
+        self.line1, = self.ax.plot([], [], color = "r", alpha=0.5)
+        self.line2, = self.ax.plot([], [], color = "g", alpha=0.5)
+        self.covariance_circle = self.ax.scatter([], [], s=1000, color='r', alpha=0.5)
 
         self.vehicle_name = vehicle_name
         sub_namespace = vehicle_name + '/' if vehicle_name else ''
@@ -83,7 +84,7 @@ class MeasurementsNode:
         self.ax.set_xlim(-5, 5)
         self.ax.set_ylim(-5, 5)
         self.ax.legend(['Localization', 'Mocap'])
-        return [self.line1, self.line2]
+        return [self.line1, self.line2, self.covariance_circle]
     
     def update_plot(self, frame):
         if self.mocap_measurements:
@@ -98,10 +99,18 @@ class MeasurementsNode:
             self.line2.set_data(mocap_xs, mocap_ys)
             
         if self.svea_measurements:
-            svea_xs = [svea_pose.x for svea_pose in self.svea_measurements]
-            svea_ys = [svea_pose.y for svea_pose in self.svea_measurements]
+            svea_xs = []
+            svea_ys = []
+            for svea_pose in self.svea_measurements:
+                svea_xs.append(svea_pose.x)
+                svea_ys.append(svea_pose.y)
+            if self.svea_measurements[len(self.svea_measurements) - 1].covariance[0] > self.COVARIANCE_THRESHOLD and self.svea_measurements[len(self.svea_measurements) - 1].covariance[5] > self.COVARIANCE_THRESHOLD:
+                self.covariance_circle.set_offsets((self.svea_measurements[len(self.svea_measurements) - 1].x, self.svea_measurements[len(self.svea_measurements) - 1].y))
+                list = [6000]
+                self.covariance_circle.set_sizes(list)
             self.line1.set_data(svea_xs, svea_ys)
-        return [self.line1, self.line2]
+
+        return [self.line1, self.line2, self.covariance_circle]
 
    
 if __name__ == '__main__':
