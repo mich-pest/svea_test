@@ -1,11 +1,15 @@
-from threading import Thread, Event
-from typing import Callable
+#! /usr/bin/env python3
 
 import rospy
 
+import tf
+import math
 from svea.states import VehicleState
 from svea_msgs.msg import VehicleState as VehicleStateMsg
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped
+from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
+import numpy as np
 
 __license__ = "MIT"
 __maintainer__ = "Michele Pestarino, Federico Sacco"
@@ -28,149 +32,85 @@ class MeasurementsNode:
             effectively be added as a namespace to the topics used by the
             corresponding localization node i.e `namespace/vehicle_name/state`.
     """
+    def __init__(self, vehicle_name: str = ''):
 
-    def __init__(self, vehicle_name: str = 'svea7'):
+        self.OFFSET_ANGLE = -math.pi/2
+        self.ROTATION_MATRIX = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
+                                [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
+        print(self.ROTATION_MATRIX)
+
+        self.fig, self.ax = plt.subplots()
+        self.line1, = self.ax.plot([], [], color = "r")
+        self.line2, = self.ax.plot([], [], color = "g")
+
         self.vehicle_name = vehicle_name
         sub_namespace = vehicle_name + '/' if vehicle_name else ''
         self._svea_state_topic = sub_namespace + 'state'
         self._mocap_state_topic = '/qualisys/svea7/pose'
 
-        self.state = VehicleState()
-        self.last_time = float('nan')
+        # current states
+        self.svea_state = None
+        self.mocap_state = None
 
-        self.is_ready = False
-        self._ready_event = Event()
-
-        # list of functions to call whenever a new state comes in
-        self.callbacks_svea = []
-        self.callbacks_mocap = []
+        # list of measurements
         self.svea_measurements = []
         self.mocap_measurements = []
-
-    def start(self) -> 'MeasurementsNode':
-        """Spins up ROS background thread; must be called to start receiving
-        data.
-        """
-        Thread(target=self._init_and_spin_ros, args=()).start()
-        return self
     
-    def _wait_until_ready(self, timeout=20.0):
-        tic = rospy.get_time()
-        self._ready_event.wait(timeout)
-        toc = rospy.get_time()
-        wait = toc - tic
-        return wait < timeout
-    
-    def _init_and_spin_ros(self):
+    def init_and_start_listeners(self):
         rospy.loginfo("Starting Measurements Node for " + self.vehicle_name)
         self.node_name = 'measurement_node'
         self._start_listen()
-        
-        self.is_ready = self._wait_until_ready()
-        if not self.is_ready:
-            rospy.logwarn("Measurements node not responding during start of "
-                          "Measurements Interface. Setting ready anyway.")
-        self.is_ready = True
-
         rospy.loginfo("{} Measurements Interface successfully initialized"
                       .format(self.vehicle_name))
-
-        self.add_callback_mocap(self._mocap_read_state_msg_specific_cbk)
-        self.add_callback_svea(self._svea_read_state_msg_specific_cbk)
-
-        # Debug
-        self.add_callback_svea(self.print_measurements)
-
-        rospy.spin()
 
     def _start_listen(self):
         rospy.Subscriber(self._svea_state_topic,
                          VehicleStateMsg,
                          self._svea_read_state_msg,
-                         tcp_nodelay=True,
                          queue_size=1)
-        
         rospy.Subscriber(self._mocap_state_topic,
                          PoseStamped,
-                         self._mocap_read_state_msg,
-                         tcp_nodelay=True,
+                         self._mocap_read_pose_msg,
                          queue_size=1)
-        
+
     def _svea_read_state_msg(self, msg):
-        self.state.state_msg = msg
-        self.last_time = rospy.get_time()
-        self._ready_event.set()
-        self._ready_event.clear()
-
-        for cb in self.callbacks_svea:
-            cb(self.state)
-
-    def _mocap_read_state_msg(self, msg):
-        self.state.state_msg = msg
-        self.last_time = rospy.get_time()
-        self._ready_event.set()
-        self._ready_event.clear()
-
-        for cb in self.callbacks_mocap:
-            cb(self.state)
-
-    def _svea_read_state_msg_specific_cbk(self, msg):
-        self.state.state_msg = msg
-        self.last_time = rospy.get_time()
         self.svea_measurements.append(msg)
 
-    def _mocap_read_state_msg_specific_cbk(self, msg):
-        self.state.state_msg = msg
-        self.last_time = rospy.get_time()
-        self.mocap_measurements.append(msg.pose)
+    def _mocap_read_pose_msg(self, msg):
+        self.mocap_measurements.append(msg)
 
-    def add_callback_svea(self, cb: Callable[[VehicleState], None]):
-        """Add svea state callback.
+    def plot_init(self):
+        self.ax.set_xlim(-5, 5)
+        self.ax.set_ylim(-5, 5)
+        self.ax.legend(['Localization', 'Mocap'])
+        return [self.line1, self.line2]
+    
+    def update_plot(self, frame):
+        if self.mocap_measurements:
+            mocap_xs = []
+            mocap_ys = []
+            for mocap_pose in self.mocap_measurements:
+                x = mocap_pose.pose.position.x 
+                y = mocap_pose.pose.position.y
+                rotated_point = np.matmul(self.ROTATION_MATRIX, np.transpose(np.array([x,y])))
+                mocap_xs.append(rotated_point[0])
+                mocap_ys.append(rotated_point[1])
+            self.line2.set_data(mocap_xs, mocap_ys)
+            
+        if self.svea_measurements:
+            svea_xs = [svea_pose.x for svea_pose in self.svea_measurements]
+            svea_ys = [svea_pose.y for svea_pose in self.svea_measurements]
+            self.line1.set_data(svea_xs, svea_ys)
+        return [self.line1, self.line2]
 
-        Every function passed into this method will be called whenever new
-        state information comes in from the localization stack.
-
-        Args:
-            cb: A callback function intended for responding to the reception of
-                state info.
-        """
-        self.callbacks_svea.append(cb)
-
-    def remove_callback_svea(self, cb: Callable[[VehicleState], None]):
-        """Remove svea state callback so it will no longer be called when state
-        information is received.
-
-        Args:
-            cb: A callback function that should be no longer used in response
-            to the reception of state info.
-        """
-        while cb in self.callbacks_svea:
-            self.callbacks_svea.pop(self.callbacks_svea.index(cb))
-
-    def add_callback_mocap(self, cb: Callable[[PoseStamped], None]):
-        """Add mocap pose callback.
-
-        Every function passed into this method will be called whenever new
-        state information comes in from the localization stack.
-
-        Args:
-            cb: A callback function intended for responding to the reception of
-                state info.
-        """
-        self.callbacks_mocap.append(cb)
-
-    def remove_callback_mocap(self, cb: Callable[[PoseStamped], None]):
-        """Remove svea state callback so it will no longer be called when state
-        information is received.
-
-        Args:
-            cb: A callback function that should be no longer used in response
-            to the reception of state info.
-        """
-        while cb in self.callbacks_mocap:
-            self.callbacks_mocap.pop(self.callbacks_mocap.index(cb))
-
-    def print_measurements(self):
-        print("svea_meaurements = " + str(self.svea_measurements))
-        print("mocap_meaurements = " + str(self.mocap_measurements))
+   
+if __name__ == '__main__':
+    ## Start node ##
+    rospy.init_node('measurement_node')
+    measurement_node = MeasurementsNode()
+    measurement_node.init_and_start_listeners()
+    ani_svea = FuncAnimation(measurement_node.fig, measurement_node.update_plot, init_func=measurement_node.plot_init)
+    plt.show(block=True) 
+    rospy.spin()
+    
     
