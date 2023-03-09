@@ -22,7 +22,7 @@ def load_param(name, value=None):
 class multi:
 
     DELTA_TIME = 0.1 # [s]
-    VEH0_TARGET_VELOCITY = 0.3 # [m/s]
+    VEH0_TARGET_VELOCITY = 0.8 # [m/s]
     VEH1_TARGET_VELOCITY = 0.8 # [m/s]
 
     def __init__(self):
@@ -49,6 +49,7 @@ class multi:
         # Trajectory
         traj_xs = np.arange(0, 5, 0.1)
         traj_ys = [np.sin(x) * x for x in traj_xs]
+        traj_ys2 = np.arange(0, 5, 0.1)
 
         ## Create simulators, models, managers, etc.
 
@@ -83,7 +84,7 @@ class multi:
 
         self.veh1_mgr = SVEAPurePursuit(LocalizationInterface,
                                         PurePursuitController,
-                                        traj_xs, traj_ys,
+                                        traj_xs, traj_ys2,
                                         vehicle_name=self.veh1_name)
 
         self.veh0_mgr.controller.target_velocity = self.VEH0_TARGET_VELOCITY
@@ -109,7 +110,7 @@ class multi:
         veh0_fin = self.veh0_mgr.is_finished
         veh1_fin = self.veh1_mgr.is_finished
         ros_fin = rospy.is_shutdown()
-        return not any([veh0_fin, veh1_fin, ros_fin])
+        return not any([ros_fin])
 
     def spin(self):
 
@@ -134,4 +135,3 @@ if __name__ == '__main__':
     ## Start node ##
 
     multi().run()
-
