@@ -38,7 +38,8 @@ class MeasurementsNode:
         self.ROTATION_MATRIX = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
         self.COVARIANCE_THRESHOLD = 7
-        
+        self.SCATTER_SCALE_COEFF = 350
+
         self.fig, self.ax = plt.subplots()
         self.line1, = self.ax.plot([], [], color = "r", alpha=0.5)
         self.line2, = self.ax.plot([], [], color = "g", alpha=0.5)
@@ -106,7 +107,7 @@ class MeasurementsNode:
                 svea_ys.append(svea_pose.y)
             #if self.svea_measurements[len(self.svea_measurements) - 1].covariance[0] > self.COVARIANCE_THRESHOLD and self.svea_measurements[len(self.svea_measurements) - 1].covariance[5] > self.COVARIANCE_THRESHOLD:
             self.covariance_circle.set_offsets((self.svea_measurements[len(self.svea_measurements) - 1].x, self.svea_measurements[len(self.svea_measurements) - 1].y))
-            scatter_area = 350 * (self.svea_measurements[len(self.svea_measurements) - 1].covariance[0] + self.svea_measurements[len(self.svea_measurements) - 1].covariance[1])
+            scatter_area = self.SCATTER_SCALE_COEFF * (self.svea_measurements[len(self.svea_measurements) - 1].covariance[0] + self.svea_measurements[len(self.svea_measurements) - 1].covariance[1])
             print("scatter_area = " + str(scatter_area))
             self.covariance_circle.set_sizes([scatter_area])
             self.line1.set_data(svea_xs, svea_ys)
