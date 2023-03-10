@@ -38,6 +38,7 @@ class localization_comparison:
         ## Parameters
 
         self.MOCAP_NAME = load_param('~mocap_name')
+        self.verbose = False# load_param('verbose')
 
         ## Set initial values for node
 
@@ -74,8 +75,9 @@ class localization_comparison:
         steering, velocity, transmission = self.svea.compute_control()
         self.svea.send_control(steering, velocity, transmission)
 
-        rospy.loginfo_throttle(1.0, "Qualisys-given State:\n{0}".format(mocap_state))
-        rospy.loginfo_throttle(1.0, "Localization-given State:\n{0}".format(localization_state))
+        if self.verbose:
+            rospy.loginfo_throttle(1.0, "Qualisys-given State:\n{0}".format(mocap_state))
+            rospy.loginfo_throttle(1.0, "Localization-given State:\n{0}".format(localization_state))
 
 
 if __name__ == '__main__':

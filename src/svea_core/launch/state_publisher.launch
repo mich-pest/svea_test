@@ -2,7 +2,7 @@
 <launch>
 
     <!-- Launch arguments -->
-    <arg name="map" default="sml"/>
+    <arg name="map" default="sml"/> 
 
     <!-- Start map server -->
     <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>

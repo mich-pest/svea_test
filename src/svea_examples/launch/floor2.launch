@@ -61,7 +61,7 @@
             - [-0.85, 0.9]
         </rosparam> -->
         <rosparam>
-            state: [-1.9, -2, 1.7] # initial state (x, y, yaw)
+            state: [15, -2, 1.7] # initial state (x, y, yaw)
             points:
             - [-1.9, 1.4]
             - [0.0, 1.4]

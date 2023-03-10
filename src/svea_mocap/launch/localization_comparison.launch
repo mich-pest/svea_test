@@ -1,6 +1,7 @@
 <launch>
     <!--name of mocap model -->
     <arg name="mocap_name"/>
+    <arg name="verbose" default="False"/>
     <!--options: indoor-->
     <arg name="localization_method" default="indoor"/>
 
@@ -19,6 +20,7 @@
 
     <node pkg="svea_mocap" type="localization_comparison.py" name="localization_comparison" output="screen">
         <param name="mocap_name" value="$(arg mocap_name)"/>
+        <param name="verbose" value="$(arg verbose)"/>
     </node>
 
     <node pkg="svea_mocap" type="tf_mocap_to_map.py" name="tf_mocap_to_map" output="screen">

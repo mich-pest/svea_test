@@ -46,7 +46,7 @@ class state_publisher:
         self.sub_clicked_point = rospy.Subscriber(
             '/clicked_point',
             PointStamped,
-            lambda msg: self.log('Clikcked point: [%f, %f]', msg.x, msg.y)
+            lambda msg: self.log('Clicked point: [%f, %f]', msg.x, msg.y)
         )
 
         rospy.loginfo("init done")
