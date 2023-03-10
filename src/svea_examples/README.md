@@ -37,7 +37,7 @@ Then, launch the following command in it:
 ```bash
 roslaunch svea_core state_publisher.launch
 ```
-When the startup process is terminated, launch this command on the remote pc (see for details):
+When the startup process is terminated, launch this command on the remote pc (see [main README](../../README.md) for details):
 ```bash
 roslaunch svea_examples measure_remote.launch 
 ```
