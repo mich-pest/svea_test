@@ -63,7 +63,7 @@ class pure_pursuit:
     TRAJ_LEN = 10
     GOAL_THRESH = 0.2
     # Obstacle threshold for obstacle management
-    OBS_THRESH = 0.7
+    OBS_THRESH = 0.2
     TARGET_VELOCITY = 0.35
     RATE = 1e9
 
@@ -151,6 +151,7 @@ class pure_pursuit:
         return not (rospy.is_shutdown())
 
     def spin(self):
+        print("is_finished = " + str(self.svea.is_finished))
         #!! Safe to send controls is localization node is up and running
         safe = self.svea.localizer.is_ready
         # limit the rate of main loop by waiting for state

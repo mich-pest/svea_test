@@ -5,6 +5,8 @@ import rospy
 import tf
 import math
 
+# TODO: angle between map and mocap as a parameter passed to the main function
+
 if __name__ == '__main__':
 	rospy.init_node('tf_mocap_to_map')
 	br = tf.TransformBroadcaster()
