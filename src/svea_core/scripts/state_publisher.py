@@ -8,6 +8,9 @@ from svea.states import VehicleState
 from svea.data import RVIZPathHandler
 
 
+'''
+TODO: Car on RVIZ
+'''
 class state_publisher:
     """
     A quick and easy way to get vehicle states.
@@ -61,7 +64,8 @@ class state_publisher:
 
     def spin(self):
         rospy.loginfo('[%f, %f, %f]', self.state.x, self.state.y, self.state.yaw)
-        self.rviz.log_state(self.state)
+        self.rviz.log_state(self.state) 
+        # This used to print the car to RVIZ
         self.rviz.visualize_data()
 
 
