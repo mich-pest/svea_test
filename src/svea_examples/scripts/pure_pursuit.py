@@ -135,23 +135,15 @@ class pure_pursuit:
     def obs_callback(self, msg):
         obs = [msg.point.x, msg.point.y, 0]
         self.OBSTACLES.append(obs)
-        #print(self.OBSTACLES)
 
     def run(self):
         while self.keep_alive():
             self.spin()
 
     def keep_alive(self):
-        #!! self.svea.is_finished becomes true if in pure_pursuit controller, function _calc_target_index, fixed with
-        #!! these lines
-        #if self.svea.is_finished:
-        #    self.update_goal()
-        #    xs, ys = self.compute_traj()
-        #    self.svea.update_traj(xs, ys)
         return not (rospy.is_shutdown())
 
     def spin(self):
-        print("is_finished = " + str(self.svea.is_finished))
         #!! Safe to send controls is localization node is up and running
         safe = self.svea.localizer.is_ready
         # limit the rate of main loop by waiting for state
