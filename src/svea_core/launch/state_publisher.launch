@@ -1,37 +1,31 @@
 <?xml version="1.0"?>
 
-<launch>    
+<launch>
 
     <!-- Launch arguments -->
     <arg name="map" default="sml"/>
-    <arg name="initial_pose_x"      default="0.0" />
-    <arg name="initial_pose_y"      default="0.0" />
-    <arg name="initial_pose_a"      default="0.0" />    
-    <arg name="launch_wheel_odometry"      default="false" />
-    
+    <arg name="initial_pose_x" default="0.0" />
+    <arg name="initial_pose_y" default="0.0" />
+    <arg name="initial_pose_a" default="0.0" />
+    <arg name="use_wheel_encoders" default="false" />
+
     <!-- Start map server -->
-    <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>    
-    
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>
+
     <!-- Start low-level interface -->
     <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
         <param name="port" value="/dev/ttyACM0"/>
         <param name="baud" value="250000"/>
-    </node>    
-    
+    </node>
+
     <!-- Start localization -->
     <include file="$(find svea_sensors)/launch/localize.launch">
-        <arg name="initial_pose_x"    value="$(arg initial_pose_x)" />
-        <arg name="initial_pose_y"    value="$(arg initial_pose_y)" />
-        <arg name="initial_pose_a"    value="$(arg initial_pose_a)" />
-    </include>    
+        <arg name="initial_pose_x" value="$(arg initial_pose_x)" />
+        <arg name="initial_pose_y" value="$(arg initial_pose_y)" />
+        <arg name="initial_pose_a" value="$(arg initial_pose_a)" />
+        <arg name="use_wheel_encoders" value="$(arg use_wheel_encoders)" />
+    </include>
 
-    <group if="$(eval launch_wheel_odometry)">
-        <include file="$(find svea_sensors)/launch/wheel_odometry.launch">
-            <arg name="start_serial" value="false" />
-        </include>
-    </group>
-    
-    
     <!-- Start state publisher -->
     <node name="state_publisher" pkg="svea_core" type="state_publisher.py" output="screen"/>
 
