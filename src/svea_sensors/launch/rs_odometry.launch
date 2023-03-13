@@ -36,6 +36,9 @@
         <include file="$(find realsense2_camera)/launch/rs_t265.launch">
             <arg name="publish_odom_tf" value="false"/>
             <arg name="camera"          value="t265_camera"/>
+            <!-- Enable image publishing (if set to true) -->
+            <arg name="enable_fisheye1" default="false"/>
+            <arg name="enable_fisheye2" default="false"/>
         </include>
     </group>
 
