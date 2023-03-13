@@ -25,7 +25,7 @@
 
     <!-- RS T265 -->
     <group ns="rs">
-        <!-- Setings to turn of the SLAM capabilities of the RS T265 -->
+        <!-- Settings to turn of the SLAM capabilities of the RS T265 -->
         <rosparam>
             realsense_camera/tracking_module/enable_relocalization: false
             realsense_camera/tracking_module/enable_pose_jumping: false
@@ -61,8 +61,9 @@
         <param name="calibrate_time"    value="true"/>
         <param name="publish_intensity" value="true"/>
         <param name="publish_multiecho" value="false"/>
-        <param name="angle_min"         value="-1.57"/>
-        <param name="angle_max"         value="1.57"/>
+        <!-- Standard angles are -2.355 and 2.355 -->
+        <param name="angle_min"         value="-2.355"/>
+        <param name="angle_max"         value="2.355"/>
     </node>
 
 </launch>
