@@ -36,6 +36,7 @@
             <arg name="start_serial" value="false"/>
         </include>
     </group>
+    
 
     <!-- Do not start the sensors, useful when running from a bag file -->
     <group unless="$(arg use_camera)">

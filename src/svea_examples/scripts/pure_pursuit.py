@@ -135,19 +135,28 @@ class pure_pursuit:
     def obs_callback(self, msg):
         obs = [msg.point.x, msg.point.y, 0]
         self.OBSTACLES.append(obs)
+        #print(self.OBSTACLES)
 
     def run(self):
         while self.keep_alive():
             self.spin()
 
     def keep_alive(self):
+        #!! self.svea.is_finished becomes true if in pure_pursuit controller, function _calc_target_index, fixed with
+        #!! these lines
+        #if self.svea.is_finished:
+        #    self.update_goal()
+        #    xs, ys = self.compute_traj()
+        #    self.svea.update_traj(xs, ys)
         return not (rospy.is_shutdown())
 
     def spin(self):
         #!! Safe to send controls is localization node is up and running
         safe = self.svea.localizer.is_ready
+        #!! Previous was state and not self.state (so when computing new trajectory for new goal, the trajectory would 
+        #!! always start fro (0,0) and not the new position)
         # limit the rate of main loop by waiting for state
-        state = self.svea.wait_for_state()
+        self.state = self.svea.wait_for_state()
 
         # Obstacle Management
         x = []
@@ -159,17 +168,17 @@ class pure_pursuit:
             x.append(obs[0])
             y.append(obs[1])
             yaws.append(0)
-            if np.hypot(state.x - obs[0], state.y - obs[1]) < self.OBS_THRESH:
+            if np.hypot(self.state.x - obs[0], self.state.y - obs[1]) < self.OBS_THRESH:
                 # If vehicle is too close to an obstacle, then stop its motion
                 self.svea.send_control(0, 0)
                 safe = False
         publish_pose_array(self.init_pts_publisher, x, y, yaws)
 
         if safe:
-            steering, velocity = self.svea.compute_control(state)
+            steering, velocity = self.svea.compute_control(self.state)
             self.svea.send_control(steering, velocity)
 
-        if np.hypot(state.x - self.goal[0], state.y - self.goal[1]) < self.GOAL_THRESH:
+        if np.hypot(self.state.x - self.goal[0], self.state.y - self.goal[1]) < self.GOAL_THRESH:
             self.update_goal()
             xs, ys = self.compute_traj()
             self.svea.update_traj(xs, ys)
