@@ -5,7 +5,7 @@ import rospy
 import math
 from svea_msgs.msg import VehicleState as VehicleStateMsg
 from geometry_msgs.msg import PoseStamped
-from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix, euler_from_quaternion
+from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -71,9 +71,9 @@ class MeasurementsNode:
         # Get vehicle name from parameters
         self.vehicle_name = vehicle_name
         # Set svea on board localization topic's name
-        self._svea_state_topic = load_param('localization_topic', '/state')
+        self._svea_state_topic = load_param('~localization_topic', '/state')
         # Set mocap topic's name
-        self._mocap_state_topic = load_param('ground_truth_topic', f'/qualisys/{vehicle_name}/pose')
+        self._mocap_state_topic = load_param('~ground_truth_topic', f'/qualisys/{vehicle_name}/pose')
         # current states
         self.svea_state = None
         self.mocap_state = None

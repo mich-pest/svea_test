@@ -37,6 +37,9 @@ svea_msgs::VehicleState stateFromOdom(const nav_msgs::Odometry& msg)
   state_msg.y = msg.pose.pose.position.y;
   state_msg.yaw = yaw;
   state_msg.v = static_cast<float>(msg.twist.twist.linear.x);
+  if (abs(state_msg.v) < 0.02) {
+    state_msg.v = 0.0;
+  }
   state_msg.covariance[0] = msg.pose.covariance[0];     // xx
   state_msg.covariance[1] = msg.pose.covariance[1];     // xy
   state_msg.covariance[4] = msg.pose.covariance[6];     // yy

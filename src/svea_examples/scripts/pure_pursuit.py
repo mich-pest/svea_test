@@ -79,6 +79,8 @@ class pure_pursuit:
         self.OBSTACLES = load_param('~obstacles_points')
         self.IS_SIM = load_param('~is_sim', False)
         self.USE_RVIZ = load_param('~use_rviz', False)
+        # Get remote rviz parameter
+        self.REMOTE_RVIZ = load_param('~remote_rviz', False)
         self.STATE = load_param('~state', [0, 0, 0, 0])
 
         assert_points(self.POINTS)
@@ -111,7 +113,7 @@ class pure_pursuit:
         self.svea = SVEAPurePursuit(LocalizationInterface,
                                     PurePursuitController,
                                     xs, ys,
-                                    data_handler=RVIZPathHandler if self.USE_RVIZ else TrajDataHandler)
+                                    data_handler=RVIZPathHandler if self.USE_RVIZ or self.REMOTE_RVIZ else TrajDataHandler)
 
         self.svea.controller.target_velocity = self.TARGET_VELOCITY
         # Create publisher in order to publish obstacle points onto RVIz

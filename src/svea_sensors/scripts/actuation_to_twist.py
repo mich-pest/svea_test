@@ -91,8 +91,17 @@ class Republish():
                 self.twist_msg.header.stamp = rospy.Time.now()
 
                 # Build Twist using bicycle model
-                self.twist_msg.twist.twist.linear.x = vel
-                self.twist_msg.twist.twist.angular.z = ang_vel
+                #!! If vel is less than given threshold set it to 0 (should reduce drifting when svea is still)
+                #self.twist_msg.twist.twist.linear.x = vel
+                #self.twist_msg.twist.twist.angular.z = ang_vel
+                if abs(vel) < 0.05: 
+                    self.twist_msg.twist.twist.linear.x = 0
+                else:
+                    self.twist_msg.twist.twist.linear.x = vel
+                if abs(ang_vel) < 0.05:
+                    self.twist_msg.twist.twist.angular.z = 0
+                else:
+                    self.twist_msg.twist.twist.angular.z = ang_vel
 
                 # Publish message
                 self.twist_pub.publish(self.twist_msg)
