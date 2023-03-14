@@ -49,6 +49,9 @@ class MeasurementsNode:
         self.OFFSET_ANGLE = -math.pi/2
         self.ROTATION_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
         
+        # Covariance threshold for updating the covariance ellipse in the plot
+        self.COVARIANCE_THRESHOLD = 5
+        
         # Create rotation matrix given the offset angle
         self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
@@ -59,7 +62,7 @@ class MeasurementsNode:
         # Second line for the mocap visualization
         self.line2, = self.ax.plot([], [], color = "g", alpha=0.5)
         # Ellipse for visualization localization covariance
-        self.covariance_ellipse = Ellipse(xy = (0, 0), width=0, height=0, alpha=0.5, edgecolor='r', fc='r')
+        self.covariance_ellipse = Ellipse(xy = (0, 0), width=0, height=0, alpha=0.25, edgecolor='r', fc='r')
         # Annotations for rmse both for x and y positions, and yaw
         self.rmse_text_x = self.ax.annotate(f'RMSE(x): 0.0000', xy = (0, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
         self.rmse_text_y = self.ax.annotate(f'RMSE(y): 0.0000', xy = (0.3, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
@@ -203,8 +206,13 @@ class MeasurementsNode:
             
             # Update covariance Ellipse (center position, width and height based off of the variance)
             self.covariance_ellipse.set_center(xy = (self.svea_measurements[len(self.svea_measurements) - 1].x, self.svea_measurements[len(self.svea_measurements) - 1].y))
-            self.covariance_ellipse.width = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[0])
-            self.covariance_ellipse.height = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[5])  
+            
+            if math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[0]) < self.COVARIANCE_THRESHOLD:
+                self.covariance_ellipse.width = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[0])
+
+            if math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[5]) < self.COVARIANCE_THRESHOLD:
+                self.covariance_ellipse.height = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[5])
+            
             # Set data for line1  
             self.line1.set_data(svea_xs, svea_ys)
             
