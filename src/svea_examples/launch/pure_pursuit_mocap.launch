@@ -9,7 +9,7 @@
     <arg name="obstacle_map" default="sml_obstacles"/>
     <arg name="input_topic" default="/qualisys/svea7/pose"/>
     <arg name="output_topic" default="/state"/>
-    <arg name="velocity_topic" default="/actuation_twist"/>
+    <arg name="velocity_topic" default="/qualisys/svea7/velocity"/>
     <arg name="state_verbose" default="false"/>
 
     <!-- Start map server -->

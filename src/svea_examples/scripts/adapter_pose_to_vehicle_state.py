@@ -1,15 +1,12 @@
 #! /usr/bin/env python3
 
 import rospy
-
 import math
 from svea_msgs.msg import VehicleState as VehicleStateMsg
-from geometry_msgs.msg import PoseStamped, TwistWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix
-from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation
+import tf
 import numpy as np
-from matplotlib.patches import Ellipse
 
 __license__ = "MIT"
 __maintainer__ = "Michele Pestarino, Federico Sacco"
@@ -40,6 +37,8 @@ class AdapterPoseToVehicleState:
         self.ROTATION_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
         self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
+        
+        self.vehicle_R_mocap = []
 
         # Get vehicle name from parameters
         self.vehicle_name = vehicle_name
@@ -47,38 +46,47 @@ class AdapterPoseToVehicleState:
         self._mocap_pose_topic = load_param('~input_topic', f'/qualisys/{vehicle_name}/pose')
         # Set mocap topic's name
         self._svea_state_topic = load_param('~output_topic', '/state')
-        self._velocity_topic = load_param('~velocity_topic', '/actuation_twist')
-        self._verbose = load_param('~state_verbose', False)
-        # Last velocity published 
-        self._current_velocity = 0
+        # Mocap's velocity topic name
+        self._mocap_vel_topic = load_param('~velocity_topic', f'/qualisys/{vehicle_name}/velocity')
+        self._verbose = load_param('~state_verbose', True)
+        # Initi current velocity twist to [0; 0] (to avoid having a first null reading from topic)
+        self._curr_vel_twist = np.array([0, 0])
 
         # Define publisher for VehicleState topic
         self._state_pub = None
         # Define subscriber for mocap pose topic
         self._pose_sub = None
-        self._vel_sub = None
+        # Define subscriber for mocap velocity topic
+        self._vel_sub = None 
         # Initialize state message
         self._state_msg = VehicleStateMsg()
 
     def init_ros_interface(self):
+        """
+        Function defining publishers/subscribers for the adapter_pose_to_vehicle_state node
+        """
         # Define mocap pose subscriber
         self._pose_sub = rospy.Subscriber(self._mocap_pose_topic,
                          PoseStamped,
                          self._pose_callback,
                          queue_size=1)
         
-        self._vel_sub = rospy.Subscriber(self._velocity_topic,
-                         TwistWithCovarianceStamped,
-                         self._vel_callback,
-                         queue_size=1)
-
         # Define vehicle state publisher 
         self._state_pub = rospy.Publisher(self._svea_state_topic, VehicleStateMsg, queue_size=1)
-    
-    def _vel_callback(self, msg):
-        self._current_velocity = msg.twist.twist.linear.x
+
+        self._vel_sub = rospy.Subscriber(self._mocap_vel_topic,
+                                        TwistStamped,
+                                        self._read_vel_msg,
+                                        tcp_nodelay=True,
+                                        queue_size=1)
 
     def _pose_callback(self, msg):
+        """
+        Callback for the mocap pose subscriber
+        
+        :param msg: msg from the mocap pose topic 
+        :type msg: PoseStamped
+        """
         # Correct pose based on the angle offset between map and mocap frames
         x_corr, y_corr, yaw_corr = self._correct_mocap_coordinates(msg.pose.position.x, msg.pose.position.y, msg.pose.orientation)
         # Assing vehicle state message fields
@@ -88,17 +96,49 @@ class AdapterPoseToVehicleState:
         self._state_msg.x = x_corr
         self._state_msg.y = y_corr
         self._state_msg.yaw = yaw_corr
+        # Compute velocity given current vehicle's twist wrt mocap frame and current quaternion of the vehicle wrt mocap frame
+        self._state_msg.v = self._compute_vehicle_velocity(msg.pose.orientation)
+        # Set covariances to 0
+        # TODO: get covariances from mocap odom topic
+        self._state_msg.covariance = [0] * 16
 
         if self._verbose:
             print("x = " + str(self._state_msg.x))
             print("y = " + str(self._state_msg.y))
-            print("yaw = " + str(self._state_msg.yaw) + "\n")
-            
-        self._state_msg.v = self._current_velocity
-        self._state_msg.covariance = [0] * 16
+            print("yaw = " + str(self._state_msg.yaw))
+            print("v = " + str(self._state_msg.v) + "\n")
 
         # Publish state message
         self._state_pub.publish(self._state_msg)
+
+    def _read_vel_msg(self, msg):
+        # Save current twist wrt mocap frame of x and y axis
+        self._curr_vel_twist = np.array([msg.twist.linear.x, msg.twist.linear.y])
+
+    def _compute_vehicle_velocity(self, quaternion):
+        """
+        Method used to compute the vehicle's velocity given the mocap's twist
+        
+        :param quaternion: quaternion used to extract and correct yaw angle 
+        :type quaternion: Quaternion
+
+        :return: v[0] vehicle velocity
+        :rtype: float
+        """
+        # Get svea's rotation matrix from pose quaternion wrt mocap frame
+        vehicle_R_mocap = quaternion_matrix([quaternion.x, 
+                                                  quaternion.y, 
+                                                  quaternion.z, 
+                                                  quaternion.w])
+        # Get vehicle yaw wrt mocap frame
+        (_, _, vehicle_yaw_mocap) = euler_from_matrix(vehicle_R_mocap)
+        # Compute vehicle velocity by reprojecting the twist of the vehicle wrt mocap frame, onto the vehicle frame
+        # itself, then extract the x component (which is the vehicle velocity)
+        self.vehicle_R_mocap = [[math.cos(-vehicle_yaw_mocap), -math.sin(-vehicle_yaw_mocap)],
+                                [math.sin(-vehicle_yaw_mocap), math.cos(-vehicle_yaw_mocap)]]
+        v = np.matmul(self.vehicle_R_mocap, np.transpose(np.array(self._curr_vel_twist)))
+        return v[0]
+        
 
     def _correct_mocap_coordinates(self, x, y, quaternion):
         """
@@ -132,12 +172,10 @@ class AdapterPoseToVehicleState:
         return rotated_point[0], rotated_point[1], mocap_yaw
         
         
-     
-
 if __name__ == '__main__':
     ## Start node ##
     rospy.init_node('adapter_pose_to_vehicle_state')
-    # Instiate object of class MeasurementNode
+    # Instantiate object of class AdapterPoseToVehicleState implementing the node
     adapter_node = AdapterPoseToVehicleState(vehicle_name='svea7')
     # Init node and start listeners
     adapter_node.init_ros_interface()
