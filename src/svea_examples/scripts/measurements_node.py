@@ -206,7 +206,7 @@ class MeasurementsNode:
             
             # Update covariance Ellipse (center position, width and height based off of the variance)
             self.covariance_ellipse.set_center(xy = (self.svea_measurements[len(self.svea_measurements) - 1].x, self.svea_measurements[len(self.svea_measurements) - 1].y))
-            
+
             if math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[0]) < self.COVARIANCE_THRESHOLD:
                 self.covariance_ellipse.width = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[0])
 
