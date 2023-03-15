@@ -41,7 +41,7 @@ class MeasurementsNode:
     def __init__(self, vehicle_name: str = ''):
         """
         Init method for class MeasuremenstNode
-
+ax_traj
         :param vehicle_name: vehicle name, defaults to ''
         :type vehicle_name: str, optional
         """
@@ -55,18 +55,31 @@ class MeasurementsNode:
         # Create rotation matrix given the offset angle
         self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
-        # Instatiate figure
-        self.fig, self.ax = plt.subplots()
+        # Instatiate figure for trajectory plotting
+        self.fig_traj, self.ax_traj = plt.subplots()
         # First line for the localization visualization
-        self.line1, = self.ax.plot([], [], color = "r", alpha=0.5)
+        self.line1_traj, = self.ax_traj.plot([], [], color = "r", alpha=0.5)
         # Second line for the mocap visualization
-        self.line2, = self.ax.plot([], [], color = "g", alpha=0.5)
+        self.line2_traj, = self.ax_traj.plot([], [], color = "g", alpha=0.5)
         # Ellipse for visualization localization covariance
         self.covariance_ellipse = Ellipse(xy = (0, 0), width=0, height=0, alpha=0.25, edgecolor='r', fc='r')
         # Annotations for rmse both for x and y positions, and yaw
-        self.rmse_text_x = self.ax.annotate(f'RMSE(x): 0.0000', xy = (0, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
-        self.rmse_text_y = self.ax.annotate(f'RMSE(y): 0.0000', xy = (0.3, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
-        self.rmse_text_yaw = self.ax.annotate(f'RMSE(yaw): 0.0000', xy = (0.6, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
+        self.rmse_text_x = self.ax_traj.annotate(f'RMSE(x): 0.0000', xy = (0, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
+        self.rmse_text_y = self.ax_traj.annotate(f'RMSE(y): 0.0000', xy = (0.3, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
+        self.rmse_text_yaw = self.ax_traj.annotate(f'RMSE(yaw): 0.0000', xy = (0.6, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
+
+        # Instatiate figure for rmse_x plotting
+        self.fig_rmse_x, self.ax_rmse_x = plt.subplots()
+        # Line for rmse x plotting
+        self.line_rmse_x, = self.ax_rmse_x.plot([], [], color = "r")
+        # Instatiate figure for rmse_y plotting
+        self.fig_rmse_y, self.ax_rmse_y = plt.subplots()
+        # Line for rmse y plotting
+        self.line_rmse_y, = self.ax_rmse_y.plot([], [], color = "g")
+        # Instatiate figure for rmse_x plotting
+        self.fig_rmse_yaw, self.ax_rmse_yaw = plt.subplots()
+        # Line for rmse yaw plotting
+        self.line_rmse_yaw, = self.ax_rmse_yaw.plot([], [], color = "b")
 
         # Get vehicle name from parameters
         self.vehicle_name = vehicle_name
@@ -81,6 +94,13 @@ class MeasurementsNode:
         # list of measurements
         self.svea_measurements = []
         self.mocap_measurements = []
+
+        # list of measurements for RMSE
+        self.rmse_x = []
+        self.rmse_y = []
+        self.rmse_yaw = []
+        # Time counter
+        self._time_tic = 0
     
     def init_and_start_listeners(self):
         """
@@ -133,22 +153,58 @@ class MeasurementsNode:
             self.mocap_measurements.append(msg)
             
 
-    def plot_init(self):
+    def plot_init_traj(self):
         """
-        Inits plot
+        Inits plot for trajectory
 
         :return: lines to be drawn on the figure
         :rtype: list of matplotlib.lines.Line2D
         """
         # Set axis' limits to the plot
-        self.ax.set_xlim(-5, 5)
-        self.ax.set_ylim(-5, 5)
+        self.ax_traj.set_xlim(-5, 5)
+        self.ax_traj.set_ylim(-5, 5)
         # Set legend for the two lines
-        self.ax.legend(['Localization', 'Mocap'], loc='upper right')
+        self.ax_traj.legend(['Localization', 'Mocap'], loc='upper right')
         # Add covariance ellipse
-        self.ax.add_patch(self.covariance_ellipse)
+        self.ax_traj.add_patch(self.covariance_ellipse)
         # Returns graphic widgets
-        return [self.line1, self.line2, self.rmse_text_x, self.rmse_text_y, self.rmse_text_yaw]
+        return [self.line1_traj, self.line2_traj, self.rmse_text_x, self.rmse_text_y, self.rmse_text_yaw]
+
+    def plot_init_rmse_x(self):
+        """
+        Inits plot for rmse of x coordinate
+
+        :return: lines to be drawn on the figure
+        :rtype: list of matplotlib.lines.Line2D
+        """
+        # Set legend for the two lines
+        self.ax_rmse_x.legend(['RMSE(x)'], loc='upper right')
+        # Returns graphic widgets
+        return self.line_rmse_x
+    
+    def plot_init_rmse_y(self):
+        """
+        Inits plot for rmse of y coordinate
+
+        :return: lines to be drawn on the figure
+        :rtype: list of matplotlib.lines.Line2D
+        """
+        # Set legend for the two lines
+        self.ax_rmse_y.legend(['RMSE(y)'], loc='upper right')
+        # Returns graphic widgets
+        return self.line_rmse_y
+    
+    def plot_init_rmse_yaw(self):
+        """
+        Inits plot for rmse of x coordinate
+
+        :return: lines to be drawn on the figure
+        :rtype: list of matplotlib.lines.Line2D
+        """
+        # Set legend for the two lines
+        self.ax_rmse_yaw.legend(['RMSE(yaw)'], loc='upper right')
+        # Returns graphic widgets
+        return self.line_rmse_yaw
 
     def _correct_mocap_coordinates(self, x, y, quaternion):
         """
@@ -182,7 +238,7 @@ class MeasurementsNode:
         return rotated_point[0], rotated_point[1], mocap_yaw
         
 
-    def update_plot(self, frame):
+    def update_plot_traj(self, frame):
         """
         Method called by the FuncAnimation for updating the plot
 
@@ -214,7 +270,7 @@ class MeasurementsNode:
                 self.covariance_ellipse.height = math.sqrt(self.svea_measurements[len(self.svea_measurements) - 1].covariance[5])
             
             # Set data for line1  
-            self.line1.set_data(svea_xs, svea_ys)
+            self.line1_traj.set_data(svea_xs, svea_ys)
             
             # If mocap measurements were received
             if self.mocap_measurements:
@@ -235,7 +291,7 @@ class MeasurementsNode:
                     # Append corrected yaw
                     mocap_yaws.append(corrected_yaw)
                 # Set data for line2
-                self.line2.set_data(mocap_xs, mocap_ys)
+                self.line2_traj.set_data(mocap_xs, mocap_ys)
 
                 if len(svea_xs) == len(mocap_xs) and len(svea_ys) == len(mocap_ys) and len(svea_yaws) == len(mocap_yaws):
                     # Compute rmse for x coordinate
@@ -250,10 +306,33 @@ class MeasurementsNode:
                     RMSE_yaw = np.round(math.sqrt(np.square(np.subtract(mocap_yaws, svea_yaws)).mean()), 4)
                     # Set text for RMSE_yaw
                     self.rmse_text_yaw.set_text(f'RMSE(yaw): {RMSE_yaw}')
+                    # Append values in the lists
+                    self.rmse_x.append(RMSE_x)
+                    self.rmse_y.append(RMSE_y)
+                    self.rmse_yaw.append(RMSE_yaw)
+                    self._time_tic += 1
         
         # Return graphic widgets
-        return [self.line1, self.line2, self.rmse_text_x, self.rmse_text_y, self.rmse_text_x]
+        return [self.line1_traj, self.line2_traj, self.rmse_text_x, self.rmse_text_y, self.rmse_text_x]
 
+    def update_plot_rmse_x(self, frame):
+        self.line_rmse_x.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.rmse_x) 
+        self.fig_rmse_x.gca().relim()
+        self.fig_rmse_x.gca().autoscale_view() 
+        return self.line_rmse_x
+    
+    def update_plot_rmse_y(self, frame):
+        self.line_rmse_y.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.rmse_y) 
+        self.fig_rmse_y.gca().relim()
+        self.fig_rmse_y.gca().autoscale_view() 
+        return self.line_rmse_y
+    
+    def update_plot_rmse_yaw(self, frame):
+        self.line_rmse_yaw.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.rmse_yaw) 
+        self.fig_rmse_yaw.gca().relim()
+        self.fig_rmse_yaw.gca().autoscale_view() 
+        return self.line_rmse_yaw
+        
    
 if __name__ == '__main__':
     ## Start node ##
@@ -263,7 +342,11 @@ if __name__ == '__main__':
     # Init node and start listeners
     measurement_node.init_and_start_listeners()
     # Create animation for the plot
-    ani_svea = FuncAnimation(measurement_node.fig, measurement_node.update_plot, init_func=measurement_node.plot_init)
+    ani_traj = FuncAnimation(measurement_node.fig_traj, measurement_node.update_plot_traj, init_func=measurement_node.plot_init_traj)
+    # Create animation for RMSE measurements over time
+    ani_rmse_x = FuncAnimation(measurement_node.fig_rmse_x, measurement_node.update_plot_rmse_x, init_func=measurement_node.plot_init_rmse_x)
+    ani_rmse_y = FuncAnimation(measurement_node.fig_rmse_y, measurement_node.update_plot_rmse_y, init_func=measurement_node.plot_init_rmse_y)
+    ani_rmse_yaw = FuncAnimation(measurement_node.fig_rmse_yaw, measurement_node.update_plot_rmse_yaw, init_func=measurement_node.plot_init_rmse_yaw)
     # Show the figure
     plt.show(block=True)
     # Spin node 

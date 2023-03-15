@@ -6,7 +6,7 @@
     <arg name="map" default="sml"/>
     <arg name="initial_pose_x" default="0.0" />
     <arg name="initial_pose_y" default="0.0" />
-    <arg name="initial_pose_a" default="0.0" />
+    <arg name="initial_pose_a" default="-1.57" /> <!-- wrt to map-->
     <arg name="use_wheel_encoders" default="false" />
 
     <!-- Start map server -->
