@@ -89,7 +89,7 @@ class AdapterPoseToVehicleState:
         """
         # Correct pose based on the angle offset between map and mocap frames
         x_corr, y_corr, yaw_corr = self._correct_mocap_coordinates(msg.pose.position.x, msg.pose.position.y, msg.pose.orientation)
-        # Assing vehicle state message fields
+        # Assign vehicle state message fields
         self._state_msg.header = msg.header
         self._state_msg.header.frame_id = 'map'
         self._state_msg.child_frame_id = 'base_link'
