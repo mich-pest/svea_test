@@ -56,7 +56,7 @@ ax_traj
         self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
                                 [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
         # Instatiate figure for trajectory plotting
-        self.fig_traj, self.ax_traj = plt.subplots()
+        self.fig_traj, self.ax_traj = plt.subplots(num='Trajectory')
         # First line for the localization visualization
         self.line1_traj, = self.ax_traj.plot([], [], color = "r", alpha=0.5)
         # Second line for the mocap visualization
@@ -69,15 +69,15 @@ ax_traj
         self.rmse_text_yaw = self.ax_traj.annotate(f'RMSE(yaw): 0.0000', xy = (0.6, -0.11), bbox=dict(boxstyle="round", fc="w"), xycoords='axes fraction')
 
         # Instatiate figure for rmse_x plotting
-        self.fig_rmse_x, self.ax_rmse_x = plt.subplots()
+        self.fig_rmse_x, self.ax_rmse_x = plt.subplots(num='RMSE(x)')
         # Line for rmse x plotting
         self.line_rmse_x, = self.ax_rmse_x.plot([], [], color = "r")
         # Instatiate figure for rmse_y plotting
-        self.fig_rmse_y, self.ax_rmse_y = plt.subplots()
+        self.fig_rmse_y, self.ax_rmse_y = plt.subplots(num='RMSE(y)')
         # Line for rmse y plotting
         self.line_rmse_y, = self.ax_rmse_y.plot([], [], color = "g")
         # Instatiate figure for rmse_x plotting
-        self.fig_rmse_yaw, self.ax_rmse_yaw = plt.subplots()
+        self.fig_rmse_yaw, self.ax_rmse_yaw = plt.subplots(num='RMSE(yaw)')
         # Line for rmse yaw plotting
         self.line_rmse_yaw, = self.ax_rmse_yaw.plot([], [], color = "b")
 
@@ -160,6 +160,9 @@ ax_traj
         :return: lines to be drawn on the figure
         :rtype: list of matplotlib.lines.Line2D
         """
+        # Set axis labels
+        self.ax_traj.set_xlabel('[m]')
+        self.ax_traj.set_xlabel('[m]')
         # Set axis' limits to the plot
         self.ax_traj.set_xlim(-5, 5)
         self.ax_traj.set_ylim(-5, 5)
@@ -177,6 +180,9 @@ ax_traj
         :return: lines to be drawn on the figure
         :rtype: list of matplotlib.lines.Line2D
         """
+        # Set axis labels
+        self.ax_rmse_x.set_xlabel('RMSE(x)')
+        self.ax_rmse_x.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_x.legend(['RMSE(x)'], loc='upper right')
         # Returns graphic widgets
@@ -189,6 +195,9 @@ ax_traj
         :return: lines to be drawn on the figure
         :rtype: list of matplotlib.lines.Line2D
         """
+        # Set axis labels
+        self.ax_rmse_y.set_xlabel('RMSE(y)')
+        self.ax_rmse_y.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_y.legend(['RMSE(y)'], loc='upper right')
         # Returns graphic widgets
@@ -201,6 +210,9 @@ ax_traj
         :return: lines to be drawn on the figure
         :rtype: list of matplotlib.lines.Line2D
         """
+        # Set axis labels
+        self.ax_rmse_yaw.set_xlabel('RMSE(yaw)')
+        self.ax_rmse_yaw.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_yaw.legend(['RMSE(yaw)'], loc='upper right')
         # Returns graphic widgets
