@@ -4,10 +4,10 @@
 
     <!-- Launch arguments -->
     <arg name="map" default="sml"/>
-    <arg name="initial_pose_x" default="0.0" />
-    <arg name="initial_pose_y" default="0.0" />
-    <arg name="initial_pose_a" default="-1.57" /> <!-- wrt to map-->
-    <arg name="use_wheel_encoders" default="false" />
+    <arg name="initial_pose_x" default="-1.9" />
+    <arg name="initial_pose_y" default="-2.0" />
+    <arg name="initial_pose_a" default="1.57" /> <!-- wrt to map-->
+    <arg name="use_wheel_encoders" default="true" />
 
     <!-- Start map server -->
     <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>

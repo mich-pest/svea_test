@@ -80,6 +80,10 @@ ax_traj
         self.fig_rmse_yaw, self.ax_rmse_yaw = plt.subplots(num='RMSE(yaw)')
         # Line for rmse yaw plotting
         self.line_rmse_yaw, = self.ax_rmse_yaw.plot([], [], color = "b")
+        # Instatiate figure for velocity plotting
+        self.fig_vel, self.ax_vel = plt.subplots(num='Velocity')
+        # Line for velocity plotting
+        self.line_vel, = self.ax_vel.plot([], [], color = "r")
 
         # Get vehicle name from parameters
         self.vehicle_name = vehicle_name
@@ -87,13 +91,16 @@ ax_traj
         self._svea_state_topic = load_param('~localization_topic', '/state')
         # Set mocap topic's name
         self._mocap_state_topic = load_param('~ground_truth_topic', f'/qualisys/{vehicle_name}/pose')
+        self._mocap_vel_topic = load_param('~velocity_topic', f'/qualisys/{vehicle_name}/velocity')
         # current states
         self.svea_state = None
         self.mocap_state = None
+        self.curr_vel = 0.0
 
         # list of measurements
         self.svea_measurements = []
         self.mocap_measurements = []
+        self.vel_measurements = []
 
         # list of measurements for RMSE
         self.rmse_x = []
@@ -127,6 +134,7 @@ ax_traj
                          PoseStamped,
                          self._mocap_read_pose_msg,
                          queue_size=1)
+        
 
     def _svea_read_state_msg(self, msg):
         """
@@ -137,6 +145,7 @@ ax_traj
         """
         # Append new svea state message to corresponding list
         self.svea_measurements.append(msg)
+        self.curr_vel = msg.v
 
 
     def _mocap_read_pose_msg(self, msg):
@@ -181,7 +190,7 @@ ax_traj
         :rtype: list of matplotlib.lines.Line2D
         """
         # Set axis labels
-        self.ax_rmse_x.set_xlabel('RMSE(x)')
+        self.ax_rmse_x.set_ylabel('RMSE(x)')
         self.ax_rmse_x.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_x.legend(['RMSE(x)'], loc='upper right')
@@ -196,7 +205,7 @@ ax_traj
         :rtype: list of matplotlib.lines.Line2D
         """
         # Set axis labels
-        self.ax_rmse_y.set_xlabel('RMSE(y)')
+        self.ax_rmse_y.set_ylabel('RMSE(y)')
         self.ax_rmse_y.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_y.legend(['RMSE(y)'], loc='upper right')
@@ -211,12 +220,27 @@ ax_traj
         :rtype: list of matplotlib.lines.Line2D
         """
         # Set axis labels
-        self.ax_rmse_yaw.set_xlabel('RMSE(yaw)')
+        self.ax_rmse_yaw.set_ylabel('RMSE(yaw)')
         self.ax_rmse_yaw.set_xlabel('time (msg received)')
         # Set legend for the two lines
         self.ax_rmse_yaw.legend(['RMSE(yaw)'], loc='upper right')
         # Returns graphic widgets
         return self.line_rmse_yaw
+    
+    def plot_init_vel(self):
+        """
+        Inits plot for velocity 
+
+        :return: lines to be drawn on the figure
+        :rtype: list of matplotlib.lines.Line2D
+        """
+        # Set axis labels
+        self.ax_vel.set_ylabel('Vel')
+        self.ax_vel.set_xlabel('time (msg received)')
+        # Set legend for the two lines
+        self.ax_vel.legend(['Velocity'], loc='upper right')
+        # Returns graphic widgets
+        return self.line_vel
 
     def _correct_mocap_coordinates(self, x, y, quaternion):
         """
@@ -322,6 +346,7 @@ ax_traj
                     self.rmse_x.append(RMSE_x)
                     self.rmse_y.append(RMSE_y)
                     self.rmse_yaw.append(RMSE_yaw)
+                    self.vel_measurements.append(self.curr_vel)
                     self._time_tic += 1
         
         # Return graphic widgets
@@ -344,6 +369,12 @@ ax_traj
         self.fig_rmse_yaw.gca().relim()
         self.fig_rmse_yaw.gca().autoscale_view() 
         return self.line_rmse_yaw
+    
+    def update_plot_vel(self, frame):
+        self.line_vel.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.vel_measurements) 
+        self.fig_vel.gca().relim()
+        self.fig_vel.gca().autoscale_view() 
+        return self.line_vel
         
    
 if __name__ == '__main__':
@@ -356,9 +387,11 @@ if __name__ == '__main__':
     # Create animation for the plot
     ani_traj = FuncAnimation(measurement_node.fig_traj, measurement_node.update_plot_traj, init_func=measurement_node.plot_init_traj)
     # Create animation for RMSE measurements over time
+    ani_vel = FuncAnimation(measurement_node.fig_vel, measurement_node.update_plot_vel, init_func=measurement_node.plot_init_vel)
     ani_rmse_x = FuncAnimation(measurement_node.fig_rmse_x, measurement_node.update_plot_rmse_x, init_func=measurement_node.plot_init_rmse_x)
     ani_rmse_y = FuncAnimation(measurement_node.fig_rmse_y, measurement_node.update_plot_rmse_y, init_func=measurement_node.plot_init_rmse_y)
     ani_rmse_yaw = FuncAnimation(measurement_node.fig_rmse_yaw, measurement_node.update_plot_rmse_yaw, init_func=measurement_node.plot_init_rmse_yaw)
+    
     # Show the figure
     plt.show(block=True)
     # Spin node 
