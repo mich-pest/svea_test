@@ -5,7 +5,7 @@ import rospy
 import math
 from svea_msgs.msg import VehicleState as VehicleStateMsg
 from geometry_msgs.msg import PoseStamped
-from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix
+from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix, quaternion_from_matrix
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -45,6 +45,10 @@ ax_traj
         :param vehicle_name: vehicle name, defaults to ''
         :type vehicle_name: str, optional
         """
+        # TODO: apply transform map -> mocap (not only angular offset now)
+        # http://wiki.ros.org/tf/Tutorials/Writing%20a%20tf%20listener%20%28Python%29
+        # (Take it just once)
+
         # Offset angle between the mocap frame (of the real world) and the map frame
         self.OFFSET_ANGLE = -math.pi/2
         self.ROTATION_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
@@ -269,6 +273,9 @@ ax_traj
                                                   quaternion.w])
         # Apply 4 dimension square rotation matrix 
         rotation_matrix = np.matmul(self.ROTATION_MATRIX_4, svea_rotation_matrix)
+
+        #print("quaternion = " + str(quaternion_from_matrix(rotation_matrix)))
+
         # Get correct yaw
         (_, _, mocap_yaw) = euler_from_matrix(rotation_matrix)
         return rotated_point[0], rotated_point[1], mocap_yaw
@@ -324,6 +331,7 @@ ax_traj
                     # Append rotated coordinates
                     mocap_xs.append(corrected_x)
                     mocap_ys.append(corrected_y)
+                    #print("x,y : " + str(corrected_x) + "," + str(corrected_y))
                     # Append corrected yaw
                     mocap_yaws.append(corrected_yaw)
                 # Set data for line2
