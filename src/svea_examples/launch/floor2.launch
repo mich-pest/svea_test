@@ -2,15 +2,15 @@
 <launch>
 
     <!-- Launch file arguments -->
-    <arg name="map" default="floor2"/>
+    <arg name="map" default="sml"/>
     <arg name="is_sim" default="true"/>
     <arg name="use_rviz" default="true"/>
     <arg name="remote_rviz" default="false"/>
-    <arg name="obstacle_map" default="floor2"/>
-    <arg name="initial_pose_x" default="0.0" />
-    <arg name="initial_pose_y" default="0.0" />
-    <arg name="initial_pose_a" default="0.0" />
-    <arg name="use_wheel_encoders" default="false" />
+    <arg name="obstacle_map" default="sml_obstacles"/>
+    <arg name="initial_pose_x" default="-2.65488696"/>
+    <arg name="initial_pose_y" default="-1.64422277"/>
+    <arg name="initial_pose_a" default="1.57" /> <!-- wrt to map-->
+    <arg name="use_wheel_encoders" default="true" />
 
     <!-- Start map server -->
     <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>

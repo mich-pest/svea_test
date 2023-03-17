@@ -4,7 +4,7 @@ import rospy
 
 import math
 from svea_msgs.msg import VehicleState as VehicleStateMsg
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix, quaternion_from_matrix
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -41,7 +41,7 @@ class MeasurementsNode:
     def __init__(self, vehicle_name: str = ''):
         """
         Init method for class MeasuremenstNode
-ax_traj
+
         :param vehicle_name: vehicle name, defaults to ''
         :type vehicle_name: str, optional
         """
@@ -51,14 +51,15 @@ ax_traj
 
         # Offset angle between the mocap frame (of the real world) and the map frame
         self.OFFSET_ANGLE = -math.pi/2
-        self.ROTATION_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
-        
+        self.T_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
+
         # Covariance threshold for updating the covariance ellipse in the plot
         self.COVARIANCE_THRESHOLD = 5
         
-        # Create rotation matrix given the offset angle
-        self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
-                                [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
+        # Create rotation matrix given the offset angle and linear misalignment between mocap and map frames
+        LINEAR_PART_MOCAP2MAP =  np.transpose(np.array([0.06, -0.06, 0]))
+        self.T_MATRIX_4[0:3,3] = LINEAR_PART_MOCAP2MAP
+        
         # Instatiate figure for trajectory plotting
         self.fig_traj, self.ax_traj = plt.subplots(num='Trajectory')
         # First line for the localization visualization
@@ -86,8 +87,10 @@ ax_traj
         self.line_rmse_yaw, = self.ax_rmse_yaw.plot([], [], color = "b")
         # Instatiate figure for velocity plotting
         self.fig_vel, self.ax_vel = plt.subplots(num='Velocity')
-        # Line for velocity plotting
-        self.line_vel, = self.ax_vel.plot([], [], color = "r")
+        # Line for svea velocity plotting
+        self.line_svea_vel, = self.ax_vel.plot([], [], color = "r")
+        # Line for mocap velocity plotting
+        self.line_mocap_vel, = self.ax_vel.plot([], [], color = "b")
 
         # Get vehicle name from parameters
         self.vehicle_name = vehicle_name
@@ -104,7 +107,9 @@ ax_traj
         # list of measurements
         self.svea_measurements = []
         self.mocap_measurements = []
-        self.vel_measurements = []
+        self.svea_vel_measurements = []
+        self.mocap_twist_measurements = []
+        self.mocap_vel_measurements = []
 
         # list of measurements for RMSE
         self.rmse_x = []
@@ -138,6 +143,12 @@ ax_traj
                          PoseStamped,
                          self._mocap_read_pose_msg,
                          queue_size=1)
+        # Subscriber to velocity topic of mocpa
+        rospy.Subscriber(self._mocap_vel_topic,
+                         TwistStamped,
+                         self._mocap_read_twist_msg,
+                         tcp_nodelay=True,
+                         queue_size=1)
         
 
     def _svea_read_state_msg(self, msg):
@@ -164,8 +175,45 @@ ax_traj
         # slower topic dictate the pace for saving data)
         if len(self.svea_measurements) > len(self.mocap_measurements):
             self.mocap_measurements.append(msg)
-            
 
+    def _mocap_read_twist_msg(self, msg):
+        """
+        Callback method for he mocap velocity subscriber
+
+        :param msg: message ground truth 
+        :type msg: TwistStamped
+        """
+        # Append new mocap pose message to corresponding list 
+        # (operation conditioned to enable set by _svea_read_state_msg,
+        # slower topic dictate the pace for saving data)
+        if len(self.svea_measurements) > len(self.mocap_twist_measurements):
+            self.mocap_twist_measurements.append(np.array([msg.twist.linear.x, msg.twist.linear.y]))
+
+    def _compute_vehicle_velocity(self, quaternion):
+        """
+        Method used to compute the vehicle's velocity given the mocap's twist
+        
+        :param quaternion: quaternion used to extract and correct yaw angle 
+        :type quaternion: Quaternion
+
+        :return: v[0] vehicle velocity
+        :rtype: float
+        """
+        # Get svea's rotation matrix from pose quaternion wrt mocap frame
+        vehicle_R_mocap = quaternion_matrix([quaternion.x, 
+                                                  quaternion.y, 
+                                                  quaternion.z, 
+                                                  quaternion.w])
+        # Get vehicle yaw wrt mocap frame
+        (_, _, vehicle_yaw_mocap) = euler_from_matrix(vehicle_R_mocap)
+        # Compute vehicle velocity by reprojecting the twist of the vehicle wrt mocap frame, onto the vehicle frame
+        # itself, then extract the x component (which is the vehicle velocity)
+        self.vehicle_R_mocap = [[math.cos(-vehicle_yaw_mocap), -math.sin(-vehicle_yaw_mocap)],
+                                [math.sin(-vehicle_yaw_mocap), math.cos(-vehicle_yaw_mocap)]]
+
+        v = np.matmul(self.vehicle_R_mocap, np.transpose(np.array(self.mocap_twist_measurements[len(self.mocap_twist_measurements) - 1])))
+        return v[0]
+            
     def plot_init_traj(self):
         """
         Inits plot for trajectory
@@ -242,9 +290,9 @@ ax_traj
         self.ax_vel.set_ylabel('Vel')
         self.ax_vel.set_xlabel('time (msg received)')
         # Set legend for the two lines
-        self.ax_vel.legend(['Velocity'], loc='upper right')
+        self.ax_vel.legend(['SVEA State Velocity', 'Mocap Velocity'], loc='upper right')
         # Returns graphic widgets
-        return self.line_vel
+        return [self.line_svea_vel, self.line_mocap_vel]
 
     def _correct_mocap_coordinates(self, x, y, quaternion):
         """
@@ -264,21 +312,26 @@ ax_traj
         :return: mocap_yaw corrected yaw angle
         :rtype: float
         """
-        # Apply rotation matrix
-        rotated_point = np.matmul(self.ROTATION_MATRIX_2, np.transpose(np.array([x,y])))
-        # Get svea's rotation matrix from pose quaternion
+        # Apply rotation matrix (xy-point rotation)
+        #rotated_point = np.matmul(self.T_MATRIX_4, np.transpose(np.array([x,y,0,1])))
+
+        #-print("rotated_point (mocap) = " + str(rotated_point))
+
+        # Get svea's rotation matrix from pose quaternion (yaw angle: quaternion to matrix)
         svea_rotation_matrix = quaternion_matrix([quaternion.x, 
                                                   quaternion.y, 
                                                   quaternion.z, 
                                                   quaternion.w])
-        # Apply 4 dimension square rotation matrix 
-        rotation_matrix = np.matmul(self.ROTATION_MATRIX_4, svea_rotation_matrix)
+        
+        svea_rotation_matrix[0:3,3] = np.transpose(np.array([x,y,0]))
 
+        # Apply 4 dimension square rotation matrix (rotate svea's yaw)
+        svea_T = np.matmul(self.T_MATRIX_4, svea_rotation_matrix)
         #print("quaternion = " + str(quaternion_from_matrix(rotation_matrix)))
 
-        # Get correct yaw
-        (_, _, mocap_yaw) = euler_from_matrix(rotation_matrix)
-        return rotated_point[0], rotated_point[1], mocap_yaw
+        # Get correct yaw (from manipulated rotation matrix)
+        (_, _, mocap_yaw) = euler_from_matrix(svea_T)
+        return svea_T[0,3], svea_T[1,3], mocap_yaw
         
 
     def update_plot_traj(self, frame):
@@ -301,6 +354,7 @@ ax_traj
                 # Append coordinates
                 svea_xs.append(svea_pose.x)
                 svea_ys.append(svea_pose.y)
+                #print("svea (x,y): " + str(svea_pose.x) + ", " + str(svea_pose.y))
                 svea_yaws.append(svea_pose.yaw)
             
             # Update covariance Ellipse (center position, width and height based off of the variance)
@@ -331,13 +385,13 @@ ax_traj
                     # Append rotated coordinates
                     mocap_xs.append(corrected_x)
                     mocap_ys.append(corrected_y)
-                    #print("x,y : " + str(corrected_x) + "," + str(corrected_y))
+                    #print("mocap x,y : " + str(corrected_x) + "," + str(corrected_y))
                     # Append corrected yaw
                     mocap_yaws.append(corrected_yaw)
                 # Set data for line2
                 self.line2_traj.set_data(mocap_xs, mocap_ys)
 
-                if len(svea_xs) == len(mocap_xs) and len(svea_ys) == len(mocap_ys) and len(svea_yaws) == len(mocap_yaws):
+                if len(svea_xs) == len(mocap_xs) and len(svea_ys) == len(mocap_ys) and len(svea_yaws) == len(mocap_yaws) and len(self.svea_vel_measurements) == len(self.mocap_vel_measurements):
                     # Compute rmse for x coordinate
                     RMSE_x = np.round(math.sqrt(np.square(np.subtract(mocap_xs, svea_xs)).mean()), 4)
                     # Set text for RMSE_x
@@ -354,7 +408,9 @@ ax_traj
                     self.rmse_x.append(RMSE_x)
                     self.rmse_y.append(RMSE_y)
                     self.rmse_yaw.append(RMSE_yaw)
-                    self.vel_measurements.append(self.curr_vel)
+                    self.svea_vel_measurements.append(self.curr_vel)
+                    if len(self.mocap_measurements) >= 1 and self.mocap_twist_measurements:
+                        self.mocap_vel_measurements.append(self._compute_vehicle_velocity(self.mocap_measurements[len(self.mocap_measurements) - 1].pose.orientation))
                     self._time_tic += 1
         
         # Return graphic widgets
@@ -379,10 +435,11 @@ ax_traj
         return self.line_rmse_yaw
     
     def update_plot_vel(self, frame):
-        self.line_vel.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.vel_measurements) 
+        self.line_svea_vel.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.svea_vel_measurements)
+        self.line_mocap_vel.set_data(np.linspace(0, self._time_tic, num=(self._time_tic)), self.mocap_vel_measurements)
         self.fig_vel.gca().relim()
         self.fig_vel.gca().autoscale_view() 
-        return self.line_vel
+        return [self.line_svea_vel, self.line_mocap_vel]
         
    
 if __name__ == '__main__':

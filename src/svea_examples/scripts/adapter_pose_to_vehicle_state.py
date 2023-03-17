@@ -119,7 +119,7 @@ class AdapterPoseToVehicleState:
         """
         Method used to compute the vehicle's velocity given the mocap's twist
         
-        :param quaternion: quaternion used to extract and correct yaw angle 
+        :param quaternion: quaternion used to extract and correct velocity
         :type quaternion: Quaternion
 
         :return: v[0] vehicle velocity
