@@ -53,7 +53,6 @@ class mocap_only:
 
         # limit the rate of main loop by waiting for state
         state = self.svea.wait_for_state()
-
         rospy.loginfo_throttle(1.0, "Qualisys-given State:\n{0}".format(state))
 
 

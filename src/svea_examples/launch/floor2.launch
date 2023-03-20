@@ -10,7 +10,6 @@
     <arg name="initial_pose_x" default="-2.65488696"/>
     <arg name="initial_pose_y" default="-1.64422277"/>
     <arg name="initial_pose_a" default="1.57" /> <!-- wrt to map-->
-    <arg name="use_wheel_encoders" default="true" />
 
     <!-- Start map server -->
     <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>
@@ -31,7 +30,6 @@
             <arg name="initial_pose_x" value="$(arg initial_pose_x)" />
             <arg name="initial_pose_y" value="$(arg initial_pose_y)" />
             <arg name="initial_pose_a" value="$(arg initial_pose_a)" />
-            <arg name="use_wheel_encoders" value="$(arg use_wheel_encoders)" />
         </include>
     </group>
 
@@ -43,14 +41,13 @@
         <param name="is_sim" value="$(arg is_sim)"/>
         <!-- Waypoints for floo2 map -->
         <rosparam>
-            state: [-1.9, -2, 1.7] # initial state (x, y, yaw)
+            state: [-2.65488696, -1.64422277, 1.57] # initial state (x, y, yaw)
             points:
-            - [-1.9, 1.4]
-            - [0.0, 1.4]
-            - [0.0, -2.0]
-            - [-1.9, -2.0]
+            - [-2.65488696, 1]
+            - [0.0, -1.64422277]
+            - [0.8, 1.0]
             obstacles_points:
-            - [0, 1.5]
+            - [0.8, 1]
         </rosparam>
     </node>
 </launch>

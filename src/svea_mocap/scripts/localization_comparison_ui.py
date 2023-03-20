@@ -5,7 +5,7 @@ import rospy
 import math
 from svea_msgs.msg import VehicleState as VehicleStateMsg
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix, quaternion_from_matrix
+from tf.transformations import quaternion_matrix, euler_from_matrix, euler_matrix
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
@@ -17,7 +17,7 @@ __email__ = "micpes@kth.se, fsacco@ug.kth.se"
 __status__ = "Development"
 
 __all__ = [
-    'MeasurementsNode',
+    'LocalizationComparisonUI',
 ]
 
 def load_param(name, value=None):
@@ -25,7 +25,7 @@ def load_param(name, value=None):
         assert rospy.has_param(name), f'Missing parameter "{name}"'
     return rospy.get_param(name, value)
 
-class MeasurementsNode:
+class LocalizationComparisonUI:
     """Interface handling the reception of state information from the
     localization stack and the mocap system.
 
@@ -40,14 +40,11 @@ class MeasurementsNode:
     """
     def __init__(self, vehicle_name: str = ''):
         """
-        Init method for class MeasuremenstNode
+        Init method for class LocalizationComparisonUI
 
         :param vehicle_name: vehicle name, defaults to ''
         :type vehicle_name: str, optional
         """
-        # TODO: apply transform map -> mocap (not only angular offset now)
-        # http://wiki.ros.org/tf/Tutorials/Writing%20a%20tf%20listener%20%28Python%29
-        # (Take it just once)
 
         # Offset angle between the mocap frame (of the real world) and the map frame
         self.OFFSET_ANGLE = -math.pi/2
@@ -312,26 +309,20 @@ class MeasurementsNode:
         :return: mocap_yaw corrected yaw angle
         :rtype: float
         """
-        # Apply rotation matrix (xy-point rotation)
-        #rotated_point = np.matmul(self.T_MATRIX_4, np.transpose(np.array([x,y,0,1])))
-
-        #-print("rotated_point (mocap) = " + str(rotated_point))
-
-        # Get svea's rotation matrix from pose quaternion (yaw angle: quaternion to matrix)
-        svea_rotation_matrix = quaternion_matrix([quaternion.x, 
+        # Get svea's rotation matrix from pose quaternion
+        svea_T_mocap = quaternion_matrix([quaternion.x, 
                                                   quaternion.y, 
                                                   quaternion.z, 
                                                   quaternion.w])
-        
-        svea_rotation_matrix[0:3,3] = np.transpose(np.array([x,y,0]))
+        # Add translational part to transofmration matrix
+        svea_T_mocap[0:3,3] = np.transpose(np.array([x,y,0]))
 
         # Apply 4 dimension square rotation matrix (rotate svea's yaw)
-        svea_T = np.matmul(self.T_MATRIX_4, svea_rotation_matrix)
-        #print("quaternion = " + str(quaternion_from_matrix(rotation_matrix)))
+        svea_T_map = np.matmul(self.T_MATRIX_4, svea_T_mocap)
 
         # Get correct yaw (from manipulated rotation matrix)
-        (_, _, mocap_yaw) = euler_from_matrix(svea_T)
-        return svea_T[0,3], svea_T[1,3], mocap_yaw
+        (_, _, mocap_yaw) = euler_from_matrix(svea_T_map)
+        return svea_T_map[0,3], svea_T_map[1,3], mocap_yaw
         
 
     def update_plot_traj(self, frame):
@@ -444,19 +435,19 @@ class MeasurementsNode:
    
 if __name__ == '__main__':
     ## Start node ##
-    rospy.init_node('measurements_node')
-    # Instiate object of class MeasurementNode
-    measurement_node = MeasurementsNode(vehicle_name='svea7')
+    rospy.init_node('localization_comparison_ui')
+    # Instanciate object of class LocalizationComparisonUI
+    measurement_node = LocalizationComparisonUI(vehicle_name='svea7')
     # Init node and start listeners
     measurement_node.init_and_start_listeners()
     # Create animation for the plot
     ani_traj = FuncAnimation(measurement_node.fig_traj, measurement_node.update_plot_traj, init_func=measurement_node.plot_init_traj)
-    # Create animation for RMSE measurements over time
+    # Create animation for velocity measurements over time
     ani_vel = FuncAnimation(measurement_node.fig_vel, measurement_node.update_plot_vel, init_func=measurement_node.plot_init_vel)
+    # Create animation for RMSE measurements over time
     ani_rmse_x = FuncAnimation(measurement_node.fig_rmse_x, measurement_node.update_plot_rmse_x, init_func=measurement_node.plot_init_rmse_x)
     ani_rmse_y = FuncAnimation(measurement_node.fig_rmse_y, measurement_node.update_plot_rmse_y, init_func=measurement_node.plot_init_rmse_y)
     ani_rmse_yaw = FuncAnimation(measurement_node.fig_rmse_yaw, measurement_node.update_plot_rmse_yaw, init_func=measurement_node.plot_init_rmse_yaw)
-    
     # Show the figure
     plt.show(block=True)
     # Spin node 

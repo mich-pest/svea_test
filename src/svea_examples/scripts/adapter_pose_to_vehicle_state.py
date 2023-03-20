@@ -24,6 +24,10 @@ def load_param(name, value=None):
 
 
 class AdapterPoseToVehicleState:
+    """
+    Class needed to publish on the vehicle's state topic data coming
+    from mocap (considered as ground truth)
+    """
 
     def __init__(self, vehicle_name: str = ''):
         """
@@ -34,9 +38,7 @@ class AdapterPoseToVehicleState:
         """
         # Offset angle between the mocap frame (of the real world) and the map frame
         self.OFFSET_ANGLE = -math.pi/2
-        self.ROTATION_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
-        self.ROTATION_MATRIX_2 = [[math.cos(self.OFFSET_ANGLE), -math.sin(self.OFFSET_ANGLE)],
-                                [math.sin(self.OFFSET_ANGLE), math.cos(self.OFFSET_ANGLE)]]
+        self.T_MATRIX_4 = euler_matrix(0, 0, self.OFFSET_ANGLE)
         
         self.vehicle_R_mocap = []
 
@@ -158,18 +160,20 @@ class AdapterPoseToVehicleState:
         :return: mocap_yaw corrected yaw angle
         :rtype: float
         """
-        # Apply rotation matrix
-        rotated_point = np.matmul(self.ROTATION_MATRIX_2, np.transpose(np.array([x,y])))
         # Get svea's rotation matrix from pose quaternion
-        svea_rotation_matrix = quaternion_matrix([quaternion.x, 
+        svea_T_mocap = quaternion_matrix([quaternion.x, 
                                                   quaternion.y, 
                                                   quaternion.z, 
                                                   quaternion.w])
-        # Apply 4 dimension square rotation matrix 
-        rotation_matrix = np.matmul(self.ROTATION_MATRIX_4, svea_rotation_matrix)
-        # Get correct yaw
-        (_, _, mocap_yaw) = euler_from_matrix(rotation_matrix)
-        return rotated_point[0], rotated_point[1], mocap_yaw
+        # Add translational part to transofmration matrix
+        svea_T_mocap[0:3,3] = np.transpose(np.array([x,y,0]))
+
+        # Apply 4 dimension square rotation matrix (rotate svea's yaw)
+        svea_T_map = np.matmul(self.T_MATRIX_4, svea_T_mocap)
+
+        # Get correct yaw (from manipulated rotation matrix)
+        (_, _, mocap_yaw) = euler_from_matrix(svea_T_map)
+        return svea_T_map[0,3], svea_T_map[1,3], mocap_yaw
         
         
 if __name__ == '__main__':

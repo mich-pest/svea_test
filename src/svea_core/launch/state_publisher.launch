@@ -7,7 +7,6 @@
     <arg name="initial_pose_x" default="-2.65488696"/>
     <arg name="initial_pose_y" default="-1.64422277"/>
     <arg name="initial_pose_a" default="1.57" /> <!-- wrt to map-->
-    <arg name="use_wheel_encoders" default="true" />
 
     <!-- Start map server -->
     <node name="map_server" pkg="map_server" type="map_server" args="$(find svea_core)/maps/$(arg map).yaml" output="screen"/>
@@ -23,7 +22,6 @@
         <arg name="initial_pose_x" value="$(arg initial_pose_x)" />
         <arg name="initial_pose_y" value="$(arg initial_pose_y)" />
         <arg name="initial_pose_a" value="$(arg initial_pose_a)" />
-        <arg name="use_wheel_encoders" value="$(arg use_wheel_encoders)" />
     </include>
 
     <!-- Start state publisher -->
