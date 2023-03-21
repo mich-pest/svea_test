@@ -30,7 +30,6 @@ class SVEAPurePursuit(SVEAManager):
     """Container for the different software module of a SVEA
     vehicle that is performing path following using a pure-pursuit
     algorithm.
-
     :param localizer: A chosen localization interface class constructor
     :type localizer: class
     :param controller: A chosen controller class constructor, this
@@ -65,12 +64,10 @@ class SVEAPurePursuit(SVEAManager):
 
     def compute_control(self, state=None):
         """Compute control for path-following using pure-pursuit
-
         :param state: State used to compute control; if no state is
                       given as an argument, self.state is automatically
                       used instead, defaults to None
         :type state: VehicleState, or None
-
         :return: Computed steering and velocity inputs from pure-pursuit
                  algorithm
         :rtype: float, float
@@ -86,7 +83,6 @@ class SVEAPurePursuit(SVEAManager):
     def goto_pt(self, pt):
         """Compute control to go to single point, taking advantage of
         the pure-pursuit controller
-
         :param pt: Point to go to
         :type pt: tuple
         :return: Computed steering and velocity inputs from pure-pursuit
@@ -112,7 +108,6 @@ class SVEAPurePursuit(SVEAManager):
 
     def update_traj(self, traj_x, traj_y):
         """Update trajectory
-
         :param traj_x: X coordinates of trajectory, defaults to []
         :type traj_x: list
         :param traj_y: Y coordinates of trajectory, defaults to []
@@ -133,7 +128,6 @@ class SVEAPurePursuit(SVEAManager):
 class SVEAPlatoonMember(SVEAPurePursuit):
     """Special case of SVEA pure pursuit object that is convenient for
     controlling a platoon vehicle.
-
     :param vehicle_name: Name of vehicle; used to initialize each
                          software module.
     :type vehicle_name: str

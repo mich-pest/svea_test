@@ -119,8 +119,6 @@ class pure_pursuit:
         # Create publisher in order to publish obstacle points onto RVIz
         self.init_pts_publisher = rospy.Publisher("/obstacles_points",
                                          PoseArray, queue_size=1) 
-        # Subsciber for the laser scan topic
-        self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
         # Subscriber for the obstacle points topic
         self.obs_sub = rospy.Subscriber('/clicked_point', PointStamped, self.obs_callback)
         
@@ -130,26 +128,16 @@ class pure_pursuit:
         if self.IS_SIM:
             self.simulator.toggle_pause_simulation()
 
-    def scan_callback(self, msg):
-        #print(f'Closest point at {min(msg.ranges)}')
-        pass
-
     def obs_callback(self, msg):
         obs = [msg.point.x, msg.point.y, 0]
         self.OBSTACLES.append(obs)
-        #print(self.OBSTACLES)
 
     def run(self):
         while self.keep_alive():
             self.spin()
 
     def keep_alive(self):
-        #!! self.svea.is_finished becomes true if in pure_pursuit controller, function _calc_target_index, fixed with
-        #!! these lines
-        #if self.svea.is_finished:
-        #    self.update_goal()
-        #    xs, ys = self.compute_traj()
-        #    self.svea.update_traj(xs, ys)
+        #!! self.svea.is_finished becomes true if in pure_pursuit controller, function _calc_target_index,
         return not (rospy.is_shutdown())
 
     def spin(self):
@@ -203,4 +191,3 @@ if __name__ == '__main__':
     ## Start node ##
 
     pure_pursuit().run()
-
